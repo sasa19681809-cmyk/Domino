@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#123c2e">
+<title>Козёл · счёт в домино</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --felt:#123c2e; --bone:#f6f0df; --ink:#241e15; --gold:#e6a93c; --gold-l:#f0c26a;
+  --red:#cf4a3d; --green:#1e6b4f; --mint:#8fd6ae; --cream:#f2ead6; --muted:rgba(242,234,214,.6);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{overflow-x:hidden;max-width:100%}
+button{font-family:inherit;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+body{
+  font-family:'Rubik',sans-serif;color:var(--cream);min-height:100vh;
+  background:
+    radial-gradient(900px 600px at 15% -10%, #1c5b44, transparent 60%),
+    radial-gradient(800px 600px at 110% 115%, #0c3325, transparent 55%),
+    var(--felt);
+}
+.felt-dots{position:fixed;inset:0;pointer-events:none;
+  background-image:radial-gradient(rgba(255,255,255,.05) 1.4px, transparent 1.6px);background-size:42px 42px}
+.noise{position:fixed;inset:0;pointer-events:none;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.16'/%3E%3C/svg%3E")}
+.vig{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.45))}
+#bg{position:fixed;inset:0;overflow:hidden;pointer-events:none}
+#bg i{position:absolute;border-radius:50%;background:var(--cream);animation:drift ease-in-out infinite alternate}
+@keyframes drift{to{transform:translate(28px,-60px)}}
+.deco{position:fixed;pointer-events:none;opacity:.06}
+.deco rect{fill:none;stroke:var(--cream);stroke-width:3}
+.deco line{stroke:var(--cream);stroke-width:3}
+.deco circle{fill:var(--cream)}
+.d1{width:140px;top:-30px;right:-36px;transform:rotate(24deg);animation:bob 14s ease-in-out infinite alternate}
+.d2{width:170px;bottom:-60px;left:-46px;transform:rotate(-18deg);animation:bob 18s ease-in-out infinite alternate-reverse}
+@keyframes bob{to{translate:0 18px}}
+
+header.top{position:relative;z-index:1;max-width:600px;margin:0 auto;padding:16px 14px 4px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.logo{position:relative;width:52px;height:48px;flex:none}
+.lt{position:absolute;width:24px;height:42px;border-radius:5px;
+  background:linear-gradient(160deg,#fbf7ec,#e9dfc4);
+  box-shadow:0 5px 10px rgba(0,0,0,.4), inset 0 1px 0 #fff;
+  background-image:radial-gradient(circle,#2b241a 2px,transparent 2.5px);background-size:8px 11px;background-position:6px 6px}
+.lt1{left:2px;top:4px;transform:rotate(-11deg)}
+.lt2{left:24px;top:0;transform:rotate(13deg)}
+.brand h1{font-family:'Russo One';font-size:clamp(20px,5.5vw,26px);letter-spacing:2.5px;color:var(--bone);line-height:1;text-shadow:0 3px 8px rgba(0,0,0,.4)}
+.brand p{font-size:11px;color:var(--muted);margin-top:4px;letter-spacing:.3px}
+.brand b{color:var(--gold-l)}
+.tools{display:flex;gap:8px;flex:none}
+.tool{width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.18);
+  background:rgba(255,255,255,.06);color:var(--cream);font-size:17px;cursor:pointer;transition:.2s}
+.tool:hover{border-color:var(--gold);transform:translateY(-2px)}
+
+.wrap{position:relative;z-index:1;max-width:600px;margin:0 auto;padding:12px 14px 6px;display:flex;flex-direction:column;gap:16px}
+
+#panels{display:flex;flex-direction:column;gap:12px}
+#panels.shake{animation:shake .4s}
+
+.tile{position:relative;border:none;text-align:left;cursor:pointer;width:100%;
+  padding:12px 14px;border-radius:13px;color:var(--ink);
+  display:grid;grid-template-columns:minmax(0,1fr) 2px auto;align-items:center;
+  background:linear-gradient(160deg,#fbf7ec,#efe5cb);
+  box-shadow:inset 0 1px 0 #fff, inset 0 -3px 0 rgba(0,0,0,.09), 0 10px 20px rgba(0,0,0,.38);
+  transition:transform .2s, box-shadow .2s}
+.tile:active{transform:scale(.985)}
+.tile:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.tile.has-pend{box-shadow:inset 0 1px 0 #fff, inset 0 -3px 0 rgba(0,0,0,.09), 0 10px 20px rgba(0,0,0,.38), 0 0 0 2.5px rgba(30,107,79,.65)}
+.tile.scored{animation:ring .7s ease-out}
+@keyframes ring{from{outline:4px solid rgba(230,169,60,.9);outline-offset:0}to{outline:4px solid rgba(230,169,60,0);outline-offset:18px}}
+.t-left{min-width:0;padding-right:12px}
+.t-name{font-weight:700;font-size:16px;line-height:1.15;overflow-wrap:anywhere}
+.t-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center}
+.pend{display:none;font-size:11px;font-weight:700;color:#0f4a33;background:rgba(143,214,174,.35);
+  border:1px dashed rgba(30,107,79,.75);padding:2px 8px;border-radius:999px;align-items:center}
+.tile.has-pend .pend{display:inline-flex}
+.pend-x{background:none;border:none;color:#0f4a33;font-weight:900;font-size:12px;cursor:pointer;
+  padding:0 0 0 6px;line-height:1}
+.pend-x:hover{color:var(--red)}
+.stash{display:none;font-size:11px;font-weight:700;color:#7c5c12;background:rgba(230,169,60,.22);
+  border:1px solid rgba(200,150,40,.55);padding:2px 8px;border-radius:999px}
+.tile.has-stash .stash{display:inline-block}
+.tag{display:none;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+  padding:2px 8px;border-radius:999px}
+.tag.red{background:var(--red);color:#fff}
+.tile.danger .tag.red{display:inline-block}
+.t-last{font-size:11px;color:rgba(36,30,21,.55);margin-top:6px}
+.t-divv{align-self:stretch;width:2px;border-radius:2px;margin:2px 0;
+  background:linear-gradient(rgba(0,0,0,.22),rgba(0,0,0,.22));box-shadow:1px 0 0 rgba(255,255,255,.7)}
+.t-right{text-align:right;padding-left:14px}
+.t-score{font-family:'Russo One';font-size:clamp(36px,10vw,52px);line-height:1;color:var(--ink);
+  text-shadow:0 2px 0 rgba(255,255,255,.5)}
+.tile.danger .t-score{color:#a92f1f}
+.t-next{display:none;margin:5px 0 2px;font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5), 0 2px 6px rgba(0,0,0,.18)}
+.tile.has-pend .t-next{display:inline-block;animation:popIn .25s cubic-bezier(.3,1.6,.5,1)}
+.t-next.rec{background:linear-gradient(160deg,#f0c26a,#e0aa3d);color:#2a2113}
+.t-next.stash{background:linear-gradient(160deg,#a5e4c2,#7ccaa1);color:#0d2b1d}
+@keyframes popIn{from{transform:scale(.6);opacity:0}}
+.t-goal{font-size:11px;color:rgba(36,30,21,.5);font-weight:500;margin-top:3px}
+.t-prog{grid-column:1/-1;height:7px;border-radius:99px;background:rgba(0,0,0,.13);margin-top:10px;overflow:hidden;
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.2)}
+.t-prog i{display:block;height:100%;width:0;border-radius:99px;transition:width .6s ease;
+  background:linear-gradient(90deg,#7fb99e,#d3922a)}
+.tile.danger .t-prog i{background:linear-gradient(90deg,#e0574a,#b3271a);animation:pulse 1s infinite}
+@keyframes pulse{50%{filter:brightness(1.35)}}
+@keyframes shake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+
+.stats{font-size:12.5px;color:var(--muted);letter-spacing:.3px;line-height:1.5}
+
+.console{border-radius:15px;padding:14px;
+  background:linear-gradient(170deg,#2b2317,#201a10);
+  border:1px solid rgba(255,255,255,.09);
+  box-shadow:0 16px 32px rgba(0,0,0,.4), inset 0 0 0 1px rgba(255,255,255,.04)}
+.hint{font-size:13px;color:var(--muted);margin:0 2px 12px;min-height:36px;line-height:1.45;transition:color .2s}
+.hint.flash{color:#ff8d7e;font-weight:500}
+.finishbtn{width:100%;padding:15px;border:none;border-radius:12px;cursor:pointer;
+  background:linear-gradient(160deg,#f4c463,#d99a26);color:var(--ink);
+  font-family:'Russo One';font-size:16px;letter-spacing:1.5px;
+  box-shadow:0 5px 0 #9a6c14, 0 10px 18px rgba(0,0,0,.3);transition:.12s}
+.finishbtn:hover{filter:brightness(1.06)}
+.finishbtn:active{transform:translateY(3px);box-shadow:0 2px 0 #9a6c14}
+.clearmarks{width:100%;margin-top:9px;padding:11px;border-radius:10px;cursor:pointer;
+  background:transparent;border:1.5px solid rgba(242,234,214,.3);color:var(--cream);
+  font-weight:700;font-size:13px;transition:.15s}
+.clearmarks:hover{border-color:var(--cream);background:rgba(255,255,255,.05)}
+.reset{width:100%;margin-top:9px;padding:11px;border-radius:10px;cursor:pointer;
+  background:transparent;border:1.5px solid rgba(207,74,61,.55);color:#ff9c90;
+  font-weight:700;font-size:13px;transition:.15s}
+.reset:hover{background:rgba(207,74,61,.15);border-color:var(--red)}
+
+.hist{border-radius:15px;padding:14px;background:linear-gradient(170deg,#2b2317,#201a10);
+  border:1px solid rgba(255,255,255,.09)}
+.hist header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.hist h2{font-family:'Russo One';font-size:13px;letter-spacing:1.5px;color:var(--bone)}
+.mini{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:var(--cream);
+  font-size:11px;padding:5px 9px;border-radius:7px;cursor:pointer;transition:.15s}
+.mini:hover:not(:disabled){border-color:var(--gold);color:var(--gold-l)}
+.mini:disabled{opacity:.35;cursor:default}
+.hist ol{list-style:none;max-height:250px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(242,234,214,.3) transparent}
+.hist li{padding:8px 4px;border-bottom:1px dashed rgba(255,255,255,.08);animation:slideIn .3s}
+@keyframes slideIn{from{opacity:0;transform:translateX(14px)}}
+.h-r1{display:flex;align-items:center;gap:8px;font-size:13.5px}
+.h-n{color:rgba(242,234,214,.4);font-size:11px;flex:none}
+.h-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.h-pts{font-weight:700;color:var(--gold-l);flex:none}
+.h-del{background:none;border:none;color:var(--cream);opacity:.5;cursor:pointer;font-size:13px;padding:2px 4px;flex:none}
+.h-del:hover{color:var(--red);opacity:1}
+.h-r2{font-size:11px;color:var(--muted);margin-top:3px;padding-left:26px;line-height:1.5}
+
+#toast{position:fixed;top:12px;left:50%;transform:translateX(-50%) translateY(-90px);z-index:40;
+  background:#171209;color:var(--cream);border:1px solid rgba(230,169,60,.5);padding:9px 16px;border-radius:999px;
+  font-size:13px;font-weight:500;box-shadow:0 10px 24px rgba(0,0,0,.4);transition:transform .3s,opacity .3s;
+  opacity:0;pointer-events:none;max-width:92vw;text-align:center}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+.overlay{position:fixed;inset:0;z-index:50;background:rgba(5,20,14,.84);backdrop-filter:blur(3px);
+  display:flex;align-items:center;justify-content:center;padding:18px}
+.overlay[hidden]{display:none}
+
+/* нижняя панель ввода игрока */
+.sheet-ov{align-items:flex-end;padding:0;background:rgba(5,20,14,.7)}
+.sheet-card{width:100%;max-width:600px;border-radius:20px 20px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));
+  background:linear-gradient(170deg,#2b2317,#201a10);border:1px solid rgba(255,255,255,.1);border-bottom:none;
+  box-shadow:0 -20px 60px rgba(0,0,0,.5);animation:slideUp .3s cubic-bezier(.3,1.2,.4,1)}
+@keyframes slideUp{from{transform:translateY(100%)}}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.sheet-name{font-family:'Russo One';font-size:20px;color:var(--bone);letter-spacing:.5px}
+.sheet-info{font-size:12px;color:var(--muted);margin-top:3px}
+.sheet-x{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);color:var(--cream);
+  width:36px;height:36px;border-radius:50%;font-size:15px;cursor:pointer;flex:none}
+.sheet-x:hover{border-color:var(--gold)}
+.sheet-display{display:flex;align-items:center;justify-content:space-between;background:#171209;border-radius:12px;
+  padding:12px 16px;box-shadow:inset 0 3px 10px rgba(0,0,0,.6);margin-bottom:8px}
+.sheet-display.shake{animation:shake .4s}
+.sd-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(240,194,106,.7)}
+.sd-num{font-family:'Russo One';font-size:42px;line-height:1;color:var(--bone)}
+.sheet-preview{min-height:34px;margin:0 2px 8px;padding:8px 12px;border-radius:9px;font-size:13px;font-weight:700;
+  line-height:1.35;display:flex;align-items:center;transition:.15s}
+.sheet-preview:empty{padding:0}
+.sheet-preview.rec{color:#2a2113;background:linear-gradient(160deg,#f0c26a,#e0aa3d)}
+.sheet-preview.stash{color:#0d2b1d;background:linear-gradient(160deg,#a5e4c2,#7ccaa1);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5), 0 3px 8px rgba(0,0,0,.25)}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+.chip{background:transparent;border:1px solid rgba(230,169,60,.5);color:var(--gold-l);
+  border-radius:999px;padding:6px 12px;font-weight:700;font-size:13px;cursor:pointer;transition:.15s}
+.chip:hover{background:var(--gold);color:var(--ink)}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.key{border:none;border-radius:10px;padding:13px 0;cursor:pointer;
+  font-family:'Russo One';font-size:20px;color:var(--ink);
+  background:linear-gradient(160deg,#fbf7ec,#e7dcc0);
+  box-shadow:0 4px 0 #b9ad8e, 0 6px 10px rgba(0,0,0,.35);transition:.1s}
+.key:hover{filter:brightness(1.05)}
+.key:active{transform:translateY(3px);box-shadow:0 1px 0 #b9ad8e}
+.key.fn{background:linear-gradient(160deg,#efe3c8,#d8caa2);box-shadow:0 4px 0 #a5976f,0 6px 10px rgba(0,0,0,.35)}
+.key.c{color:var(--red)}
+.sheet-btns{display:flex;gap:10px;margin-top:12px}
+.sheet-btns .btn-gold{flex:1.6}
+.sheet-btns .btn-ghost{flex:1}
+.btn-gold{border:none;border-radius:10px;padding:13px 16px;cursor:pointer;
+  font-family:'Russo One';font-size:14px;letter-spacing:1px;color:var(--ink);
+  background:linear-gradient(160deg,#f4c463,#d99a26);box-shadow:0 5px 0 #9a6c14,0 8px 16px rgba(0,0,0,.25);transition:.12s}
+.btn-gold:hover{filter:brightness(1.07)}
+.btn-gold:active{transform:translateY(3px);box-shadow:0 2px 0 #9a6c14}
+.btn-ghost{background:none;border:2px solid rgba(255,255,255,.25);border-radius:10px;padding:11px 14px;
+  font-weight:700;font-size:13px;color:var(--cream);cursor:pointer;transition:.15s}
+.btn-ghost:hover{border-color:var(--cream)}
+
+.set-card{width:min(520px,94vw);max-height:92vh;overflow-y:auto;border-radius:16px;padding:22px 18px;
+  background:linear-gradient(170deg,#2b2317,#201a10);border:1px solid rgba(255,255,255,.1);
+  box-shadow:0 30px 60px rgba(0,0,0,.5);animation:popUp .35s ease}
+@keyframes popUp{from{opacity:0;transform:translateY(30px) scale(.95)}}
+.set-card h2{font-family:'Russo One';font-size:18px;letter-spacing:2px;color:var(--bone);margin-bottom:8px}
+.set-card label{display:block;font-size:11px;letter-spacing:1.6px;text-transform:uppercase;
+  color:rgba(240,194,106,.75);margin:16px 0 8px}
+.set-card label small{letter-spacing:.3px;text-transform:none;color:var(--muted);font-weight:400}
+.note{font-size:12.5px;line-height:1.55;color:var(--muted)}
+.note b{color:var(--gold-l)}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg-b{padding:11px 6px;border-radius:10px;border:1px solid rgba(255,255,255,.16);cursor:pointer;
+  background:rgba(255,255,255,.05);color:var(--cream);font-size:13px;font-weight:500;transition:.15s}
+.seg-b.on{background:var(--gold);border-color:var(--gold);color:var(--ink);font-weight:700}
+.slot{margin-bottom:8px}
+.slot-sel{width:100%;background:#171209;border:1px solid rgba(255,255,255,.16);border-radius:9px;color:var(--cream);
+  font:500 16px 'Rubik';padding:10px 12px;outline:none;transition:.15s;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23f0c26a' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center}
+.slot-sel:focus{border-color:var(--gold)}
+.slot-sel option:disabled{color:#777}
+.slot-new{margin-top:6px}
+#customTarget,.slot-new{width:100%;background:#171209;border:1px solid rgba(255,255,255,.16);
+  border-radius:9px;color:var(--cream);font:500 16px 'Rubik';padding:10px 12px;outline:none;transition:.15s}
+#customTarget:focus,.slot-new:focus{border-color:var(--gold)}
+.roster-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:2px}
+.r-chip{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.16);color:var(--cream);padding:5px 10px;border-radius:999px;font-size:12.5px;font-weight:500}
+.r-chip.sel{border-color:var(--gold);color:var(--gold-l)}
+.r-chip button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0;line-height:1}
+.r-chip button:hover:not(:disabled){color:var(--red)}
+.r-chip button:disabled{opacity:.35;cursor:default}
+.r-empty{font-size:12px;color:var(--muted)}
+.tchips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tchip{padding:8px 14px;border-radius:999px;border:1px solid rgba(230,169,60,.5);cursor:pointer;
+  background:transparent;color:var(--gold-l);font-weight:700;font-size:13px;transition:.15s}
+.tchip.on{background:var(--gold);color:var(--ink)}
+#customTarget{width:96px;padding:8px 12px;font-size:14px}
+.set-btns{display:flex;gap:10px;justify-content:flex-end;margin-top:22px}
+.set-btns .btn-ghost{color:var(--cream)}
+
+footer{position:relative;z-index:1;text-align:center;font-size:11px;color:rgba(242,234,214,.35);padding:18px 14px 26px}
+@media(min-width:600px){.tile{padding:14px 18px}}
+</style>
+</head>
+<body>
+
+<div class="felt-dots"></div>
+<div id="bg"></div>
+<svg class="deco d1" viewBox="0 0 120 230" aria-hidden="true">
+  <rect x="4" y="4" width="112" height="222" rx="14"/><line x1="10" y1="115" x2="110" y2="115"/>
+  <circle cx="34" cy="32" r="7"/><circle cx="86" cy="32" r="7"/><circle cx="34" cy="64" r="7"/><circle cx="86" cy="64" r="7"/><circle cx="34" cy="96" r="7"/><circle cx="86" cy="96" r="7"/>
+  <circle cx="34" cy="140" r="7"/><circle cx="86" cy="140" r="7"/><circle cx="60" cy="168" r="7"/><circle cx="34" cy="196" r="7"/><circle cx="86" cy="196" r="7"/>
+</svg>
+<svg class="deco d2" viewBox="0 0 120 230" aria-hidden="true">
+  <rect x="4" y="4" width="112" height="222" rx="14"/><line x1="10" y1="115" x2="110" y2="115"/>
+  <circle cx="60" cy="32" r="7"/>
+  <circle cx="34" cy="140" r="7"/><circle cx="86" cy="140" r="7"/><circle cx="60" cy="168" r="7"/><circle cx="34" cy="196" r="7"/><circle cx="86" cy="196" r="7"/>
+</svg>
+<div class="noise"></div>
+<div class="vig"></div>
+<div id="toast"></div>
+
+<header class="top">
+  <div class="brand">
+    <div class="logo"><span class="lt lt1"></span><span class="lt lt2"></span></div>
+    <div>
+      <h1>ДОМИНО</h1>
+      <p>«Козёл» · кто дошёл до <b id="goalChip">101</b> — проиграл</p>
+    </div>
+  </div>
+  <div class="tools">
+    <button id="soundBtn" class="tool" title="Звук">🔊</button>
+    <button id="setBtn" class="tool" title="Настройки">⚙</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="panels"></div>
+  <div class="stats" id="stats"></div>
+
+  <section class="console">
+    <p class="hint" id="hint">Нажимайте на карточки игроков и вводите, кто сколько взял. Победителю — ничего.</p>
+    <button id="finishBtn" class="finishbtn">✅ ЗАВЕРШИТЬ РАУНД</button>
+    <button id="clearMarksBtn" class="clearmarks">✕ Отменить отметки раунда</button>
+    <button id="resetBtn" class="reset">⟲ Сбросить всю партию</button>
+  </section>
+
+  <section class="hist">
+    <header>
+      <h2>ИСТОРИЯ</h2>
+      <button id="undoBtn" class="mini">↩ Отменить последний</button>
+    </header>
+    <ol id="histList"></ol>
+  </section>
+</main>
+
+<footer>Счёт сохраняется в этом браузере автоматически</footer>
+
+<!-- панель ввода очков игрока -->
+<div class="overlay sheet-ov" id="sheet" hidden>
+  <div class="sheet-card">
+    <div class="sheet-head">
+      <div>
+        <div class="sheet-name" id="sheetName">Игрок</div>
+        <div class="sheet-info" id="sheetInfo"></div>
+      </div>
+      <button id="sheetClose" class="sheet-x" title="Закрыть">✕</button>
+    </div>
+    <div class="sheet-display" id="sheetDisplay">
+      <span class="sd-label">очки за раунд</span>
+      <span class="sd-num" id="sdNum">0</span>
+    </div>
+    <div class="sheet-preview" id="sheetPreview"></div>
+    <div class="chips" id="sheetChips"></div>
+    <div class="keypad" id="sheetKeys"></div>
+    <div class="sheet-btns">
+      <button id="sheetClear" class="btn-ghost">Снять отметку</button>
+      <button id="sheetOk" class="btn-gold">ДОБАВИТЬ</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="settings" hidden>
+  <div class="set-card">
+    <h2>НАСТРОЙКИ</h2>
+    <label>Правила</label>
+    <p class="note">Нажмите на карточку игрока и введите, сколько камней он взял (победителю раунда ничего
+    не добавляйте). Итог виден сразу при вводе и на карточке игрока. Нажмите <b>«Завершить раунд»</b>: если
+    очки отмечены у всех — программа спросит, была ли <b>рыба</b>; если один без очков — спросит, выиграл ли
+    он. Запись идёт по правилу 13: пока у игрока 0 записанных очков, суммы меньше 13 запоминаются в
+    <b>копилку</b>; от 13 и больше — записываются, копилка обнуляется. <b>Выигрыш раунда тоже обнуляет
+    копилку.</b> Кто достиг <b id="noteTarget">101</b> — <b>козёл</b> и проиграл.</p>
+    <label>Режим игры</label>
+    <div class="seg" id="modeSeg"></div>
+    <label>Игроки в партии <small>— выберите из списка или добавьте новых; один игрок не может играть за два места</small></label>
+    <div id="nameInputs"></div>
+    <label>Список игроков <small>— ✕ удаляет из списка</small></label>
+    <div class="roster-chips" id="rosterBox"></div>
+    <label>Козёл при очках</label>
+    <div class="tchips" id="targetChips"></div>
+    <div class="set-btns">
+      <button id="cancelSet" class="btn-ghost">Отмена</button>
+      <button id="saveSet" class="btn-gold">СОХРАНИТЬ</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(()=>{ 'use strict';
+const $=s=>document.querySelector(s);
+const LS='dominoGoatV8';
+const THRESHOLD=13; // от 13 и больше — записываем. Нужно строго «больше 13»? Замените ниже >= на >
+const MODES={p4:{n:4,label:'4 игрока'},p3:{n:3,label:'3 игрока'},p2:{n:2,label:'2 игрока'},t2:{n:2,label:'2 команды'}};
+const DEF={target:101,mode:'p4',names:['Игрок 1','Игрок 2','Игрок 3','Игрок 4'],
+  roster:['Игрок 1','Игрок 2','Игрок 3','Игрок 4'],history:[],round:[0,0,0,0],sound:true};
+
+function load(){try{const raw=localStorage.getItem(LS);if(raw){const s=JSON.parse(raw);
+  const names=[...(s.names||[]),...DEF.names].slice(0,4);
+  let roster=Array.isArray(s.roster)?s.roster.filter(Boolean):null;
+  if(!roster||!roster.length) roster=[...new Set([...names.filter(Boolean),...DEF.roster])];
+  return {...DEF,...s,names,roster,
+    round:Array.isArray(s.round)?[...s.round,0,0,0,0].slice(0,4):[0,0,0,0],
+    history:Array.isArray(s.history)?s.history:[]};}}catch(e){}
+  return JSON.parse(JSON.stringify(DEF));}
+let state=load();
+let disp=[0,0,0,0], tileRefs=[], tempMode, tempTarget, tempRoster=[], slotState=[], toastT;
+const save=()=>{try{localStorage.setItem(LS,JSON.stringify(state))}catch(e){}};
+const nSides=()=>MODES[state.mode].n;
+const plural=(n,a,b,c)=>{const m=n%100;if(m>=11&&m<=14)return c;switch(n%10){case 1:return a;case 2:case 3:case 4:return b;default:return c}};
+const fmtTime=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
+
+/* начисление очков одному игроку по правилу 13 / копилки */
+function applyTo(i,p,st,tot){
+  if(tot[i]===0){
+    const sum=p+st[i];
+    if(sum>=THRESHOLD){ st[i]=0; tot[i]+=sum; return {side:i,from:sum-p,sum,rec:sum,totAfter:tot[i]} }
+    st[i]=sum; return {side:i,from:sum-p,sum,rec:0,totAfter:0};
+  }
+  st[i]=0; tot[i]+=p; return {side:i,from:0,sum:p,rec:p,totAfter:tot[i]};
+}
+/* полный пересчёт истории: копилки, счета, результат каждой записи.
+   Победа в раунде обнуляет копилку победителя. */
+function replay(){
+  const st=Array(4).fill(0), tot=Array(4).fill(0), per=[];
+  for(const h of state.history){
+    const list=[];
+    for(let i=0;i<nSides();i++){
+      const p=h.pts[i]||0;
+      if(p>0) list.push(applyTo(i,p,st,tot));
+      else list.push({side:i,skip:true,totAfter:tot[i]});
+    }
+    if(h.t==='win'&&h.win>=0&&h.win<list.length){
+      const had=st[h.win]>0;
+      st[h.win]=0;
+      list[h.win]={side:h.win,skip:true,win:true,clearedStash:had,totAfter:tot[h.win]};
+    }
+    per.push(list);
+  }
+  return {st,tot,per};
+}
+
+/* предпросмотр окончательного результата для игрока при добавлении p очков */
+function previewFor(R,i,p){
+  if(p<=0)return null;
+  const tot=R.tot[i],st=R.st[i];
+  if(tot===0){
+    const sum=p+st;
+    if(sum>=THRESHOLD)return{type:'rec',rec:sum,totAfter:sum,
+      txt:`Итог: запишется ${sum}${st>0?` (${st} из копилки + ${p})`:''} → счёт станет ${sum}`};
+    return{type:'stash',sum,
+      txt:`Итог: в копилку → станет ${sum}${st>0?` (${st} + ${p})`:''} · до записи не хватает ${THRESHOLD-sum}`};
+  }
+  return{type:'rec',rec:p,totAfter:tot+p,txt:`Итог: запишется сразу +${p} → счёт станет ${tot+p}`};
+}
+
+/* звук */
+let AC;
+function beep(f,g,d,type='square'){if(!state.sound)return;try{
+  AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();
+  const t=AC.currentTime,o=AC.createOscillator(),v=AC.createGain();
+  o.type=type;o.frequency.value=f;v.gain.setValueAtTime(g,t);
+  v.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(v);v.connect(AC.destination);o.start(t);o.stop(t+d+.03);}catch(e){}}
+const keySound=()=>beep(1600,.05,.04);
+const clack=()=>{beep(2400,.06,.03);beep(300,.18,.09,'triangle')};
+const undoSound=()=>beep(420,.08,.09,'sine');
+
+/* карточки */
+function buildPanels(){const box=$('#panels');box.innerHTML='';tileRefs=[];
+  for(let i=0;i<nSides();i++){
+    const b=document.createElement('div');b.className='tile';b.setAttribute('role','button');b.tabIndex=0;
+    b.innerHTML=`<div class="t-left">
+        <div class="t-name"></div>
+        <div class="t-meta"><span class="pend"></span><span class="stash">копилка: 0</span><span class="tag red">на грани</span></div>
+        <div class="t-last">ждём первый раунд</div>
+      </div>
+      <div class="t-divv"></div>
+      <div class="t-right">
+        <div class="t-score">0</div>
+        <div><span class="t-next"></span></div>
+        <div class="t-goal"></div>
+      </div>
+      <div class="t-prog"><i></i></div>`;
+    b.querySelector('.t-name').textContent=state.names[i];
+    b.addEventListener('click',()=>openSheet(i));
+    b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();openSheet(i)}});
+    box.appendChild(b);
+    tileRefs.push({root:b,pend:b.querySelector('.pend'),stash:b.querySelector('.stash'),
+      tagR:b.querySelector('.tag.red'),last:b.querySelector('.t-last'),score:b.querySelector('.t-score'),
+      next:b.querySelector('.t-next'),prog:b.querySelector('.t-prog i'),goal:b.querySelector('.t-goal')});
+  }}
+
+function animScore(i,to){const el=tileRefs[i].score,from=disp[i]||0;disp[i]=to;
+  if(from===to){el.textContent=to;return}
+  const t0=performance.now(),d=600;
+  const f=t=>{const k=Math.min(1,(t-t0)/d),e=1-Math.pow(1-k,3);
+    el.textContent=Math.round(from+(to-from)*e);if(k<1)requestAnimationFrame(f);};
+  requestAnimationFrame(f);}
+
+function refresh(anim=true){const R=replay(),T=R.tot,n=nSides();
+  for(let i=0;i<n;i++){const r=tileRefs[i];if(!r)continue;
+    anim?animScore(i,T[i]):(r.score.textContent=T[i],disp[i]=T[i]);
+    r.prog.style.width=Math.min(100,T[i]/state.target*100)+'%';
+    r.root.classList.toggle('danger',T[i]>=state.target*.75);
+    r.tagR.textContent=T[i]>=state.target?'козёл':'на грани';
+    r.goal.textContent='козёл при '+state.target;
+    if(R.st[i]>0){r.root.classList.add('has-stash');r.stash.textContent='копилка: '+R.st[i]}
+    else r.root.classList.remove('has-stash');
+    const p=state.round[i]||0;
+    r.root.classList.toggle('has-pend',p>0);
+    r.pend.textContent='';
+    if(p>0){
+      const pv=previewFor(R,i,p);
+      r.pend.append(document.createTextNode(`за раунд: +${p}`));
+      const x=document.createElement('button');x.type='button';x.className='pend-x';x.textContent='✕';
+      x.title='Отменить отметку';
+      x.addEventListener('click',e=>{e.stopPropagation();
+        state.round[i]=0;save();undoSound();refresh(false);
+        toast(`«${state.names[i]}»: отметка отменена`);});
+      r.pend.appendChild(x);
+      if(pv.type==='rec'){r.next.textContent=`→ будет ${pv.totAfter}`;r.next.className='t-next rec'}
+      else {r.next.textContent=`→ копилка ${pv.sum}`;r.next.className='t-next stash'}
+    } else {r.next.textContent='';r.next.className='t-next';}
+    let lastTxt=null;
+    for(let j=R.per.length-1;j>=0&&!lastTxt;j--)
+      for(const item of R.per[j])
+        if(item.side===i){
+          if(item.win){lastTxt=item.clearedStash?'посл.: выиграл (копилка сброшена)':'посл.: выиграл раунд';break}
+          if(!item.skip){lastTxt=item.rec>0?'посл.: записано +'+item.rec:'посл.: в копилку +'+item.sum;break}
+        }
+    r.last.textContent=lastTxt||'ждём первый раунд';
+  }
+  $('#goalChip').textContent=state.target;renderStats(R);updateHint();}
+
+function renderStats(R){const el=$('#stats'),H=state.history,T=R.tot;
+  if(!H.length){el.textContent='Отметьте очки каждого игрока за раунд и нажмите «Завершить раунд».';return}
+  let big=0;for(const list of R.per)for(const e of list)if(e.rec>big)big=e.rec;
+  const min=Math.min(...T),leader=T.filter(x=>x===min).length===1?T.indexOf(min):-1;
+  const parts=['Раундов: '+H.length];
+  if(big)parts.push('Крупнейшая запись: +'+big);
+  if(leader>=0){const sorted=[...T].sort((a,b)=>a-b);parts.push('Впереди: «'+state.names[leader]+'» (отрыв '+(sorted[1]-sorted[0])+')')}
+  else parts.push('Счёт равный');
+  el.textContent=parts.join(' · ');}
+
+function updateHint(){const h=$('#hint');if(h.classList.contains('flash'))return;
+  const n=nSides(),cnt=state.round.slice(0,n).filter(v=>v>0).length;
+  let txt;
+  if(cnt===0) txt='Нажимайте на карточки игроков и вводите, кто сколько взял. Победителю — ничего.';
+  else if(cnt===n) txt='Очки отмечены у всех — жмите «Завершить раунд» (программа спросит про рыбу).';
+  else if(cnt===n-1) txt=`Отмечено ${cnt} из ${n} — жмите «Завершить раунд» (один без очков = победитель).`;
+  else txt=`Отмечено ${cnt} из ${n}. Добавьте остальным — или нажмите «Завершить раунд».`;
+  h.textContent=txt;}
+function flashHint(msg){const h=$('#hint');h.textContent=msg;h.classList.add('flash');
+  setTimeout(()=>{h.classList.remove('flash');updateHint()},1500);}
+
+/* панель ввода очков игрока */
+const sheetEl=$('#sheet');let sheetSide=-1,sheetNum=0;
+function openSheet(i){sheetSide=i;sheetNum=0;
+  const R=replay(),pend=state.round[i]||0;
+  $('#sheetName').textContent=state.names[i];
+  $('#sheetInfo').textContent=`счёт: ${R.tot[i]} · копилка: ${R.st[i]}`+(pend?` · уже отмечено: +${pend}`:'');
+  $('#sheetClear').style.display=pend>0?'':'none';
+  sheetSetNum(0);sheetEl.hidden=false;}
+function closeSheet(){sheetEl.hidden=true;sheetSide=-1}
+function sheetSetNum(v){sheetNum=Math.max(0,Math.min(999,v));$('#sdNum').textContent=sheetNum;updateSheetPreview()}
+function updateSheetPreview(){const el=$('#sheetPreview');
+  const pv=sheetSide<0?null:previewFor(replay(),sheetSide,sheetNum);
+  if(!pv){el.textContent='';el.className='sheet-preview';return}
+  el.textContent=pv.txt;
+  el.className='sheet-preview '+(pv.type==='rec'?'rec':'stash');}
+$('#sheetClose').onclick=closeSheet;
+sheetEl.addEventListener('click',e=>{if(e.target.id==='sheet')closeSheet()});
+$('#sheetClear').onclick=()=>{state.round[sheetSide]=0;save();clack();
+  toast(`«${state.names[sheetSide]}»: отметка снята`);closeSheet();refresh(false);};
+$('#sheetOk').onclick=confirmSheet;
+function confirmSheet(){
+  if(sheetNum===0){
+    if(state.round[sheetSide]>0){$('#sheetClear').onclick();return}
+    const d=$('#sheetDisplay');d.classList.remove('shake');void d.offsetWidth;d.classList.add('shake');
+    toast('Введите очки');return}
+  const i=sheetSide;
+  const pv=previewFor(replay(),i,sheetNum);
+  state.round[i]=sheetNum;save();clack();
+  toast(pv.type==='rec'
+    ?`«${state.names[i]}»: +${sheetNum} → запишется ${pv.rec}`
+    :`«${state.names[i]}»: +${sheetNum} → в копилку (${pv.sum})`);
+  closeSheet();refresh(false);
+  const r=tileRefs[i];r.root.classList.add('scored');setTimeout(()=>r.root.classList.remove('scored'),750);}
+
+/* клавиатура и кнопки панели ввода */
+['1','2','3','4','5','6','7','8','9','C','0','⌫'].forEach(k=>{
+  const b=document.createElement('button');b.type='button';
+  b.className='key'+(k==='C'?' fn c':isNaN(k)?' fn':'');b.textContent=k;
+  b.addEventListener('click',()=>{keySound();
+    if(k==='C')sheetSetNum(0);else if(k==='⌫')sheetSetNum(Math.floor(sheetNum/10));else sheetSetNum(sheetNum*10+ +k)});
+  $('#sheetKeys').appendChild(b);});
+[5,10,15,20,25].forEach(v=>{const b=document.createElement('button');b.type='button';b.className='chip';
+  b.textContent='+'+v;b.addEventListener('click',()=>{keySound();sheetSetNum(sheetNum+v)});$('#sheetChips').appendChild(b);});
+
+/* завершение раунда: программа сама определяет рыбу или победителя */
+$('#finishBtn').onclick=finishRound;
+function finishRound(){
+  if(!sheetEl.hidden)return;
+  const n=nSides(),rd=state.round.slice(0,n);
+  const cnt=rd.filter(v=>v>0).length;
+  if(cnt===0){flashHint('Сначала добавьте очки игрокам за раунд');return}
+  if(cnt===n){
+    if(!confirm(`Очки отмечены у всех игроков (${rd.map((p,i)=>`${state.names[i]}: +${p}`).join(', ')}).\nЭто была РЫБА?`))return;
+    commitRound('fish',-1);
+  } else if(cnt===n-1){
+    const w=rd.findIndex(v=>v===0);
+    if(!confirm(`«${state.names[w]}» остался без очков.\nПодтвердите: он выиграл раунд?`))return;
+    commitRound('win',w);
+  } else {
+    const p=$('#panels');p.classList.remove('shake');void p.offsetWidth;p.classList.add('shake');
+    flashHint(`Отмечено ${cnt} из ${n}. Нужно: либо всем (рыба), либо всем, кроме победителя`);
+  }}
+function commitRound(t,w){
+  const before=replay();
+  state.history.push({t,win:w,pts:state.round.slice(0,nSides()),time:Date.now()});
+  state.round=[0,0,0,0];save();clack();
+  const R=replay();
+  let msg=t==='fish'?'Раунд записан: РЫБА — очки всем':`Раунд записан: выиграл «${state.names[w]}»`;
+  if(t==='win'&&before.st[w]>0)msg+=' · копилка обнулена';
+  toast(msg);
+  refresh(true);renderHistory();
+  for(let i=0;i<nSides();i++)
+    if(before.tot[i]<state.target&&R.tot[i]>=state.target)
+      setTimeout(()=>toast(`🐐 «${state.names[i]}» набрал ${R.tot[i]} — КОЗЁЛ!`),1100);}
+
+/* отмена отметок текущего раунда */
+$('#clearMarksBtn').onclick=()=>{
+  const n=nSides();
+  if(!state.round.slice(0,n).some(v=>v>0)){toast('Отметок нет');return}
+  if(!confirm('Отменить все отметки текущего раунда?'))return;
+  state.round=[0,0,0,0];save();undoSound();refresh(false);toast('Отметки раунда отменены');};
+
+/* история */
+function renderHistory(){const ol=$('#histList');ol.innerHTML='';
+  const H=state.history,R=replay();
+  for(let j=H.length-1;j>=0;j--){const h=H[j],list=R.per[j];
+    const li=document.createElement('li');
+    const r1=document.createElement('div');r1.className='h-r1';
+    const mk=(cls,txt)=>{const s=document.createElement('span');s.className=cls;s.textContent=txt;return s};
+    const r2=document.createElement('div');r2.className='h-r2';
+    const taken=h.pts.reduce((a,b)=>a+(b||0),0);
+    if(h.t==='fish') r1.append(mk('h-n','#'+(j+1)),mk('h-name','🐟 рыба — очки всем'),mk('h-pts','+'+taken));
+    else r1.append(mk('h-n','#'+(j+1)),mk('h-name','выиграл «'+(state.names[h.win]||'—')+'»'),mk('h-pts','+'+taken));
+    const parts=[];
+    for(let i=0;i<nSides();i++){
+      const p=h.pts[i]||0; if(p<=0) continue;
+      const e=list[i];
+      parts.push(`«${state.names[i]}»: +${p} → ${e.rec>0?'записано '+e.rec:'в копилку ('+e.sum+')'}`);
+    }
+    if(h.t==='win'){
+      const we=list[h.win];
+      parts.push(`«${state.names[h.win]}»: победа`+(we&&we.clearedStash?', копилка обнулена':''));
+    }
+    r2.textContent=parts.join(' · ')+' · '+fmtTime(h.t);
+    const del=document.createElement('button');del.className='h-del';del.textContent='✕';del.title='Удалить запись';
+    del.addEventListener('click',ev=>{ev.stopPropagation();removeEntry(j)});
+    r1.appendChild(del);
+    li.append(r1,r2);ol.appendChild(li);}
+  $('#undoBtn').disabled=!H.length;}
+function removeEntry(j){state.history.splice(j,1);save();undoSound();refresh(true);renderHistory();}
+$('#undoBtn').onclick=()=>{if(state.history.length)removeEntry(state.history.length-1)};
+
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2200);}
+
+/* полный сброс */
+$('#resetBtn').onclick=()=>{
+  if((state.history.length||state.round.some(v=>v>0))&&confirm('Сбросить всю партию? Счёт, копилки и история будут удалены.')){
+    state.history=[];state.round=[0,0,0,0];save();refresh(false);renderHistory();clack();toast('Партия сброшена');}};
+
+/* клавиатура физическая */
+window.addEventListener('keydown',e=>{
+  if(!$('#settings').hidden){if(e.key==='Escape')closeSettings();return}
+  if(!sheetEl.hidden){
+    if(e.key>='0'&&e.key<='9')sheetSetNum(sheetNum*10+ +e.key);
+    else if(e.key==='Backspace'){e.preventDefault();sheetSetNum(Math.floor(sheetNum/10))}
+    else if(e.key==='Enter'){e.preventDefault();confirmSheet()}
+    else if(e.key==='Escape')closeSheet();
+    return}
+  if(e.key==='Enter'){e.preventDefault();finishRound()}});
+
+/* настройки */
+const setEl=$('#settings');
+function buildModeSeg(){const seg=$('#modeSeg');seg.innerHTML='';
+  Object.entries(MODES).forEach(([k,m])=>{const b=document.createElement('button');b.type='button';
+    b.className='seg-b'+(k===tempMode?' on':'');b.textContent=m.label;
+    b.onclick=()=>{tempMode=k;[...seg.children].forEach(x=>x.classList.remove('on'));b.classList.add('on');
+      slotState=[];buildNames()};
+    seg.appendChild(b);});}
+
+/* слоты игроков: выбор из списка или новый, без повторов */
+function initSlotState(){
+  const n=MODES[tempMode].n,used=new Set();
+  slotState=[];
+  for(let i=0;i<n;i++){
+    const nm=(state.names[i]||'').trim();
+    if(nm&&!used.has(nm)){used.add(nm);slotState.push({mode:'pick',name:nm});continue}
+    const free=tempRoster.find(r=>!used.has(r));
+    if(free){used.add(free);slotState.push({mode:'pick',name:free})}
+    else slotState.push({mode:'new',typed:''});
+  }}
+function buildNames(){
+  if(slotState.length!==MODES[tempMode].n)initSlotState();
+  renderSlots();}
+function renderSlots(){
+  const box=$('#nameInputs');box.innerHTML='';
+  slotState.forEach((st,i)=>{
+    const slot=document.createElement('div');slot.className='slot';
+    const sel=document.createElement('select');sel.className='slot-sel';
+    const opts=[...tempRoster];
+    if(st.mode==='pick'&&st.name&&!opts.includes(st.name))opts.unshift(st.name);
+    opts.forEach(nm=>{
+      const o=document.createElement('option');o.value=nm;o.textContent=nm;
+      if(st.mode==='pick'&&nm===st.name)o.selected=true;
+      if(slotState.some((s2,j)=>j!==i&&s2.mode==='pick'&&s2.name===nm)){
+        o.disabled=true;o.textContent=nm+' (уже в партии)';}
+      sel.appendChild(o);
+    });
+    const newOpt=document.createElement('option');newOpt.value='__new__';newOpt.textContent='➕ Новый игрок…';
+    if(st.mode==='new')newOpt.selected=true;
+    sel.appendChild(newOpt);
+    sel.addEventListener('change',()=>{
+      if(sel.value==='__new__')slotState[i]={mode:'new',typed:''};
+      else slotState[i]={mode:'pick',name:sel.value};
+      renderSlots();});
+    const inp=document.createElement('input');inp.className='slot-new';inp.maxLength=18;
+    inp.placeholder='Имя нового игрока';inp.value=st.typed||'';inp.hidden=st.mode!=='new';
+    inp.addEventListener('input',()=>{slotState[i].typed=inp.value});
+    slot.append(sel,inp);box.appendChild(slot);
+  });
+  refreshRosterChips();}
+
+function refreshRosterChips(){
+  const box=$('#rosterBox');box.innerHTML='';
+  const used=new Set(slotState.filter(s=>s.mode==='pick').map(s=>s.name));
+  if(!tempRoster.length){box.innerHTML='<span class="r-empty">Список пуст — добавьте игроков выше.</span>';return}
+  tempRoster.forEach(nm=>{
+    const chip=document.createElement('span');chip.className='r-chip'+(used.has(nm)?' sel':'');
+    const t=document.createElement('span');t.textContent=nm;chip.appendChild(t);
+    const x=document.createElement('button');x.type='button';x.textContent='✕';
+    if(used.has(nm)){x.disabled=true;x.title='Сейчас участвует в партии';}
+    else x.addEventListener('click',()=>{tempRoster=tempRoster.filter(v=>v!==nm);renderSlots()});
+    chip.appendChild(x);box.appendChild(chip);
+  });}
+
+function buildTargets(){const wrap=$('#targetChips');wrap.innerHTML='';
+  [51,75,101,150,200].forEach(v=>{const b=document.createElement('button');b.type='button';
+    b.className='tchip'+(v===tempTarget?' on':'');b.textContent=v;
+    b.onclick=()=>{tempTarget=v;$('#customTarget').value='';
+      [...wrap.querySelectorAll('.tchip')].forEach(x=>x.classList.remove('on'));b.classList.add('on')};
+    wrap.appendChild(b);});
+  const inp=document.createElement('input');inp.type='number';inp.id='customTarget';
+  inp.min=2;inp.max=999;inp.placeholder='своё';
+  if(![51,75,101,150,200].includes(tempTarget))inp.value=tempTarget;
+  inp.oninput=()=>{const v=parseInt(inp.value,10);
+    if(v>=2){tempTarget=v;[...wrap.querySelectorAll('.tchip')].forEach(x=>x.classList.remove('on'))}};
+  wrap.appendChild(inp);}
+function openSettings(){tempMode=state.mode;tempTarget=state.target;tempRoster=[...(state.roster||DEF.roster)];
+  slotState=[];
+  buildModeSeg();buildNames();buildTargets();
+  $('#noteTarget').textContent=state.target;setEl.hidden=false;}
+function closeSettings(){setEl.hidden=true}
+$('#setBtn').onclick=openSettings;
+$('#cancelSet').onclick=closeSettings;
+setEl.addEventListener('click',e=>{if(e.target.id==='settings')closeSettings()});
+$('#saveSet').onclick=()=>{
+  const newCount=MODES[tempMode].n;
+  if(state.history.length&&(tempMode!==state.mode||state.history.some(h=>h.win>=newCount))){
+    if(!confirm('Смена режима сбросит текущий счёт. Продолжить?'))return;
+    state.history=[];}
+  /* разбор слотов с защитой от повторов */
+  const merged=new Array(slotState.length);
+  const usedNames=new Set();const added=[];
+  slotState.forEach((st,i)=>{
+    if(st.mode==='pick'){merged[i]=st.name;usedNames.add(st.name)}
+    else merged[i]=null;});
+  let dup=null;
+  slotState.forEach((st,i)=>{
+    if(st.mode!=='new'||dup)return;
+    let nm=(st.typed||'').trim();
+    if(!nm){let k=1;while(usedNames.has('Игрок '+k))k++;nm='Игрок '+k;}
+    if(usedNames.has(nm)){dup=nm;return}
+    usedNames.add(nm);merged[i]=nm;
+    if((st.typed||'').trim())added.push(nm);
+  });
+  if(dup){alert(`Имя «${dup}» уже занято в партии. Один человек не может играть за два места.`);return}
+  added.forEach(nm=>{if(!tempRoster.includes(nm))tempRoster.push(nm)});
+  const merged4=[...merged,...DEF.names].slice(0,4);
+  state.names=merged4;
+  state.roster=tempRoster.slice(0,30);
+  state.mode=tempMode;
+  state.target=(tempTarget&&tempTarget>=2)?tempTarget:state.target;
+  state.round=[0,0,0,0];
+  save();buildPanels();refresh(false);renderHistory();closeSettings();clack();
+  if(added.length)toast('Добавлены в список: '+added.join(', '));};
+
+$('#soundBtn').onclick=()=>{state.sound=!state.sound;save();syncSound();if(state.sound)keySound()};
+const syncSound=()=>$('#soundBtn').textContent=state.sound?'🔊':'🔇';
+for(let i=0;i<14;i++){const s=document.createElement('i');const sz=6+Math.random()*16;
+  s.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;width:${sz}px;height:${sz}px;
+  animation-duration:${18+Math.random()*26}s;animation-delay:-${Math.random()*20}s;opacity:${.04+Math.random()*.07}`;
+  $('#bg').appendChild(s);}
+
+buildPanels();refresh(false);renderHistory();syncSound();
+})();
+</script>
+</body>
+</html>
